@@ -14,7 +14,6 @@ uint8_t receiverMAC[] = {0x4E, 0xEB, 0xD6, 0x1F, 0x69, 0xB6};
 typedef struct struct_message {
     float lat;
     float lon;
-    float alt;
   } struct_message;
   
   struct_message myData;
@@ -38,7 +37,6 @@ void loop() {
             if (gps.location.isValid()) {
                 float lat = gps.location.lat();
                 float lon = gps.location.lng();
-                float alt = gps.altitude.meters();
                 
                 // Send data via ESP-NOW
                 esp_now_send(receiverMAC, (uint8_t *)&myData, sizeof(myData));

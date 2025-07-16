@@ -23,7 +23,7 @@ last_log_time = time.time()
 lat, lon = None, None
 sample = 0
 
-while sample <= 30:
+while sample < 30:
     try:
         line = ser.readline().decode("utf-8").strip()
         
@@ -44,10 +44,9 @@ while sample <= 30:
 
                     sheet.append([timestamp, lat, lon])
                     workbook.save(EXCEL_FILE)
-                    print(f"Logged: {timestamp}, {lat}, {lon}")
-                    
-                    last_log_time = current_time
                     sample += 1
+                    last_log_time = current_time
+                    print(f"Logged: {sample}/30, {timestamp}, {lat}, {lon}")
 
     except KeyboardInterrupt:
         print("\nStopping logging...")

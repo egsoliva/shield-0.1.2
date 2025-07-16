@@ -31,3 +31,9 @@ void setup() {
 
 void loop() {
 }
+
+// Printing MAC Address for debugging purposes
+void printMacAddres() {
+    String mac = WiFi.macAddress();
+    Serial.println(mac);
+}
