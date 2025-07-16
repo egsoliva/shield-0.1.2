@@ -2,7 +2,7 @@ import serial
 import openpyxl
 import time
 
-SERIAL_PORT = "COM11"
+SERIAL_PORT = "COM12"
 BAUD_RATE = 9600
 
 ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)

@@ -4,7 +4,6 @@
 typedef struct struct_message {
     float lat;
     float lon;
-    float alt;
 } struct_message;
 
 struct_message myData;
@@ -16,8 +15,6 @@ void OnDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len) {
     Serial.println(myData.lat, 6);
     Serial.print("Longitude: ");
     Serial.println(myData.lon, 6);
-    Serial.print("Altitude: ");
-    Serial.println(myData.alt);
 }
 
 void setup() {
