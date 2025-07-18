@@ -17,4 +17,4 @@ To properly set up the code, the libraries must be installed into your computer.
 When soldering the accelerometer module make sure that the chip faces upward inside the closure. This helps ensure that the readings on the z-axis are close to 1g.
 
 
-[here](karatonis2006.pdf)
+Read this [article](karatonis2006.pdf) for more information regarding real-time human movement using accelerometers.
