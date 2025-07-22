@@ -14,9 +14,9 @@ uint8_t receiverMAC[] = {0x4E, 0xEB, 0xD6, 0x1F, 0x69, 0xB6};
 typedef struct struct_message {
     float lat;
     float lon;
-  } struct_message;
+} struct_message;
   
-  struct_message myData;
+struct_message myData;
 
 void setup() {
     Serial.begin(9600);
@@ -44,7 +44,6 @@ void loop() {
                 // Store in struct
                 myData.lat = lat;
                 myData.lon = lon;
-                myData.alt = alt;
             }
         }
     }
@@ -54,4 +53,10 @@ void onDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
     delay(500);
     Serial.print("Send Status: ");
     Serial.println(sendStatus == 0 ? "Success" : "Failed");
+}
+
+// Printing MAC Address for debugging purposes
+void printMacAddres() {
+    String mac = WiFi.macAddress();
+    Serial.println(mac);
 }
