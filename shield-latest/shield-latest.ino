@@ -37,15 +37,15 @@
 #define SIM800L_TX 18
 #define GPS_BAUD 9600
 #define SIM800L_BAUD 9600
-#define IMPACT_THRESHOLD 16.00f        // Threshold in m/s^2
-#define FREE_FALL_THRESHOLD 9.00f     // Threshold in m/s^2
-#define ORIENTATION_THRESHOLD 20.0f  // Threshold in degrees
+#define IMPACT_THRESHOLD 16.00f  
+#define FREE_FALL_THRESHOLD 9.00f  
+#define ORIENTATION_THRESHOLD 20.0f 
 
 enum FallState {
-  NORMAL,              // No fall detected
-  FREE_FALL_DETECTED, // Free-fall is detected
-  IMPACT_DETECTED,   // Impact is detected after fall
-  FALL_CONFIRMED    // Fall is confirmed
+  NORMAL, 
+  FREE_FALL_DETECTED, 
+  IMPACT_DETECTED, 
+  FALL_CONFIRMED
 };
 
 FallState fallState = NORMAL;
@@ -54,30 +54,16 @@ unsigned long freeFallTime = 0;
 unsigned long impactTime = 0;
 float impactPeak = 0;
 
-float tilt = 0;
-float deltaTilt = 0;
-float accel = 0;
+float current_tilt = 0;
+float prev_tilt = 0;
 
 unsigned long startMillis, currentMillis;
 
-double latitude, longitude;
+float x_accel_raw, y_accel_raw, z_accel_raw, accel_raw, x_filtered, 
+      y_filtered, z_filtered, x_medfilt, y_medfilt, z_medfilt, accel, 
+      z_accel_raw_g;
 
-typedef struct RawData {
-  float xAccel;
-  float yAccel;
-  float zAccel;
-} RawData;
-
-typedef struct Filtered {
-  float xAccel;
-  float yAccel;
-  float zAccel;
-  float totalAccel;
-} Filtered;
-
-RawData Raw;
-Filtered MedianFilter;
-Filtered LowPassFilter;
+double pitch, roll, yaw, filt_pitch, filt_roll, tilt, tilt_medfilt;
 
 const char *numbers[] = {"adviserNumber", "guardianNumber", "nurseNumber"}; // Place their numbers in the respective places
 
@@ -87,20 +73,22 @@ HardwareSerial sim800Serial(1);
 
 ADXL345 accelerometer;
 
-const double sampleFreq = 45; // Sample frequency (Hz)
-const double cutoffFreq = 10; // Cut-off frequency (Hz)
-const double normalizedCutoffFreq = 2 * cutoffFreq / sampleFreq; // Normalized cut-off frequency (Hz)
+double latitude = gps.location.lat();
+double longitude = gps.location.lng();
 
-// Median filter 
-MedianFilter<3, float> medfilt_X = {0};
+const double f_s = 45; // Sample frequency (Hz)
+const double f_c = 10; // Cut-off frequency (Hz)
+const double f_n = 2 * f_c / f_s; // Normalized cut-off frequency (Hz)
+
+MedianFilter<3, float> medfilt_X = {0}; // Median filter 
 MedianFilter<4, float> medfilt_Y = {0};
 MedianFilter<3, float> medfilt_Z = {0};
 MedianFilter<3, float> medfilt_tilt = {0};
 
 bool detect_fall(float accel, float tilt) {
-  static float prevTilt = tilt;
-  float deltaTilt = abs(tilt - prevTilt);
-  prevTilt = tilt;
+  static float prev_tilt = tilt;
+  float tilt_change = abs(tilt - prev_tilt);
+  prev_tilt = tilt;
 
   switch(fallState) {
     case NORMAL:
@@ -109,6 +97,7 @@ bool detect_fall(float accel, float tilt) {
         fallState = FREE_FALL_DETECTED;
       }
       break;
+
     case FREE_FALL_DETECTED:
       if(millis() - freeFallTime > 300) {
         if(accel > IMPACT_THRESHOLD) {
@@ -121,9 +110,10 @@ bool detect_fall(float accel, float tilt) {
         }
       }
       break;
+
     case IMPACT_DETECTED:
       if(millis() - impactTime > 300) {
-        if(deltaTilt > ORIENTATION_THRESHOLD) {
+        if(tilt_change > ORIENTATION_THRESHOLD) {
           fallState = FALL_CONFIRMED;
           return true;
         } 
@@ -132,10 +122,12 @@ bool detect_fall(float accel, float tilt) {
         }
       }
       break;
+      
     case FALL_CONFIRMED:
       fallState = NORMAL;
       break;
   }
+  
   return false;
 }
 
@@ -154,7 +146,8 @@ void loop() {
   readAccelerometerData();
   readGyroscopeData();
   printDebugInfo();
-  if (detect_fall(MedianFilter.totalAccel, tilt)) {
+
+  if (detect_fall(accel, tilt)) {
     tone(BUZZER, 4000, 5000);
     sendEmergency();
   }
@@ -167,37 +160,44 @@ void setAccelerometerSettings() {
   accelerometer.setDataRate(ADXL345_DATARATE_100HZ);
 }
 
-// Read data from accelerometer and applies median filtering to remove noise
+// Read data from accelerometer and filter noise
 void readAccelerometerData() {
   Vector norm = accelerometer.readNormalize();
 
-  Raw.xAccel = norm.XAxis;
-  Raw.yAccel = norm.YAxis;
-  Raw.zAccel = norm.ZAxis + 2.00;
+  x_accel_raw = norm.XAxis;
+  y_accel_raw = norm.YAxis;
+  z_accel_raw = norm.ZAxis + 2.00;
 
-  MedianFilter.xAccel = medfilt_X(Raw.xAccel);
-  MedianFilter.yAccel = medfilt_Y(Raw.yAccel);
-  MedianFilter.zAccel = medfilt_Z(Raw.zAccel);
-  accel = sqrt(pow(MedianFilter.xAccel, 2) + pow(MedianFilter.yAccel, 2) + pow(MedianFilter.zAccel, 2));
+  x_medfilt = medfilt_X(x_accel_raw);
+  y_medfilt = medfilt_Y(y_accel_raw);
+  z_medfilt = medfilt_Z(z_accel_raw);
+  accel = sqrt(pow(x_medfilt, 2) + pow(y_medfilt, 2) + pow(z_medfilt, 2));
+
+  //Serial.print("X:"); Serial.print(x_medfilt, 2);
+  //Serial.print(" Y:"); Serial.print(y_medfilt, 2);
+  //Serial.print(" Z:"); Serial.print(z_medfilt, 2);
+  //Serial.print(" Accel:"); Serial.println(accel, 2);
+  //delay(10); // Send data every 10ms or at 100 Hz
 }
 
-// Calculates the tilt angle based on the filtered noise from zAccel and accel
 void readGyroscopeData() {
   Vector norm = accelerometer.readNormalize();
   
-  Raw.xAccel = norm.XAxis;
-  Raw.yAccel = norm.YAxis;
-  Raw.zAccel = norm.ZAxis + 2.00;
+  x_accel_raw = norm.XAxis;
+  y_accel_raw = norm.YAxis;
+  z_accel_raw = norm.ZAxis + 2.00;
 
-  MedianFilter.xAccel = medfilt_X(Raw.xAccel);
-  MedianFilter.yAccel = medfilt_Y(Raw.yAccel);
-  MedianFilter.zAccel = medfilt_Z(Raw.zAccel);
+  x_medfilt = medfilt_X(x_accel_raw);
+  y_medfilt = medfilt_Y(y_accel_raw);
+  z_medfilt = medfilt_Z(z_accel_raw);
 
-  double ratio = MedianFilter.zAccel / accel;
+  double ratio = z_medfilt / accel;
   ratio = constrain(ratio, -1.0, 1.0);
   tilt = acos(ratio) * 180.0 / M_PI;
 
   current_tilt = tilt;
+
+  //Serial.print("Tilt:"); Serial.println(tilt, 3);
 }
 
 // Read data from GPS module (from TinyGPS++ library)
@@ -205,8 +205,6 @@ void readGPSData() {
   while(gpsSerial.available() > 0) {
     gps.encode(gpsSerial.read());
     if (gps.location.isUpdated()) {
-      latitude = gps.location.lat();
-      longitude = gps.location.lng();
       Serial.print("Latitude:"); Serial.print(latitude, 6);
       Serial.print(" Longitude:"); Serial.print(longitude, 6);
     }
