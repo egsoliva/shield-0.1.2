@@ -35,6 +35,7 @@
 #define GPS_TX 16
 #define SIM800L_RX 19
 #define SIM800L_TX 18
+#define BUTTON 5
 #define GPS_BAUD 9600
 #define SIM800L_BAUD 9600
 #define IMPACT_THRESHOLD 16.00f  
@@ -75,6 +76,10 @@ ADXL345 accelerometer;
 
 double latitude = gps.location.lat();
 double longitude = gps.location.lng();
+
+int lastState = HIGH;
+int currentState;
+int ctr_state = 0;
 
 const double f_s = 45; // Sample frequency (Hz)
 const double f_c = 10; // Cut-off frequency (Hz)
@@ -134,6 +139,7 @@ bool detect_fall(float accel, float tilt) {
 void setup() {
   Serial.begin(115200);  
   pinMode(BUZZER, OUTPUT);
+  pinMODE(BUTTON, INPUT_PULLUP);
   Wire.begin(SDA, SCL);
   accelerometer.begin();
   gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX, GPS_TX);
@@ -143,15 +149,30 @@ void setup() {
 }
 
 void loop() {
+  buttonState();
   readAccelerometerData();
   readGyroscopeData();
   printDebugInfo();
 
   if (detect_fall(accel, tilt)) {
-    tone(BUZZER, 4000, 5000);
+    if ctr_state % 2 == 1 {
+      tone(BUZZER, 4000, 5000);
+    }
     sendEmergency();
   }
   delay(10);
+}
+
+// Create a counter that tracks the button state (whether pressed on or off)
+void buttonState() {
+  currentState = digitalRead(BUTTON);
+
+  if (lastState == LOW && currentState == HIGH) {
+    ctr_state ++;
+  }
+
+  lastState = currentState;
+  
 }
 
 // You may modify the range and data rate (other settings can be found on the ADXL345 library)
