@@ -8,9 +8,9 @@ lat = data['Latitude']
 lon = data['Longitude']
 true_lat = data['True Latitude']
 true_lon = data['True Longitude']
-true_dist, true_dist1, true_dist2 = [], [], []
-dist1, dist2 = [], []
-mse1, mse2 = [], []
+true_dist, true_dist1, true_dist2, true_dist3 = [], [], [], []
+dist1, dist2, dist3 = [], [], []
+mse1, mse2, mse3 = [], [], []
 loc_rmse = []
 
 dlat = np.deg2rad(lat - true_lat)
@@ -41,3 +41,9 @@ true_dist2 = true_dist[30:60]
 mse2 = mean_squared_error(dist2, true_dist2)
 np.sqrt(mse2)
 loc_rmse.append(np.sqrt(mse2))
+
+dist3 = dist[60:90]
+true_dist3 = true_dist[60:90]
+mse2 = mean_squared_error(dist3, true_dist3)
+np.sqrt(mse3)
+loc_rmse.append(np.sqrt(mse3))
