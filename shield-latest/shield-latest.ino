@@ -168,11 +168,10 @@ void buttonState() {
   currentState = digitalRead(BUTTON);
 
   if (lastState == LOW && currentState == HIGH) {
-    ctr_state ++;
+    ctr_state++;
   }
 
   lastState = currentState;
-  
 }
 
 // You may modify the range and data rate (other settings can be found on the ADXL345 library)
